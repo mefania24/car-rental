@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { RotateCcw, Play, Pause, Sun, Maximize2, Palette } from 'lucide-react';
 
 const CAR_COLORS = [
@@ -36,7 +37,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
     const scene = new THREE.Scene();
     sceneRef.current = scene;
     scene.background = new THREE.Color(0x0b0f19);
-    scene.fog = new THREE.Fog(0x0b0f19, 15, 30);
+    scene.fog = new THREE.Fog(0x0b0f19, 15, 35);
 
     // 2. Camera setup
     const camera = new THREE.PerspectiveCamera(
@@ -54,7 +55,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.3;
     rendererRef.current = renderer;
 
     // Clean container before attaching
@@ -68,22 +69,22 @@ export default function Car3DViewer({ car, height = '450px' }) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
     controls.maxPolarAngle = Math.PI / 2 - 0.02; // Prevent going beneath floor
-    controls.minDistance = 3;
-    controls.maxDistance = 12;
+    controls.minDistance = 2.5;
+    controls.maxDistance = 14;
     controls.autoRotate = autoRotate;
     controls.autoRotateSpeed = 1.2;
     controls.target.set(0, 0.6, 0);
     controlsRef.current = controls;
 
-    // 5. Lighting Setup
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    // 5. Studio Lighting Setup
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.0);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x1e293b, 1.4);
     hemiLight.position.set(0, 20, 0);
     scene.add(hemiLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
     mainLight.position.set(8, 12, 6);
     mainLight.castShadow = true;
     mainLight.shadow.mapSize.width = 2048;
@@ -91,80 +92,134 @@ export default function Car3DViewer({ car, height = '450px' }) {
     mainLight.shadow.bias = -0.0001;
     scene.add(mainLight);
 
-    const fillLight = new THREE.DirectionalLight(0x60a5fa, 1.2);
+    const fillLight = new THREE.DirectionalLight(0x60a5fa, 1.5);
     fillLight.position.set(-8, 6, -6);
     scene.add(fillLight);
 
-    // 6. Showroom Floor Stage
-    const stageRadius = 5.5;
+    // 6. Showroom Floor Stage with realistic reflections
+    const stageRadius = 5.8;
     const stageGeo = new THREE.CylinderGeometry(stageRadius, stageRadius + 0.5, 0.15, 64);
     const stageMat = new THREE.MeshStandardMaterial({
-      color: 0x111827,
-      roughness: 0.25,
-      metalness: 0.7
+      color: 0x0f172a,
+      roughness: 0.15,
+      metalness: 0.8
     });
     const stage = new THREE.Mesh(stageGeo, stageMat);
     stage.position.y = -0.075;
     stage.receiveShadow = true;
     scene.add(stage);
 
-    // Subtle showroom ring grid
-    const ringGeo = new THREE.RingGeometry(5.4, 5.5, 64);
+    // Subtle neon showroom ring
+    const ringGeo = new THREE.RingGeometry(5.6, 5.75, 64);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide });
     const ring = new THREE.Mesh(ringGeo, ringMat);
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.01;
     scene.add(ring);
 
-    // 7. Load Car Model: Custom GLTF or Procedural 3D Preset
+    // 7. Load Car Model: Photorealistic GLB Model or Custom Model
     carBodyMeshRef.current = [];
     headlightsRef.current = [];
 
     const carGroup = new THREE.Group();
     scene.add(carGroup);
 
-    if (car.model3dUrl && car.model3dType === 'custom') {
-      const loader = new GLTFLoader();
-      loader.load(
-        car.model3dUrl,
-        (gltf) => {
-          const model = gltf.scene;
-          model.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = true;
-              if (child.material) {
-                // Track paintable meshes
-                if (child.material.name?.toLowerCase().includes('paint') || child.material.name?.toLowerCase().includes('body')) {
-                  carBodyMeshRef.current.push(child);
-                }
+    // Setup DRACOLoader and GLTFLoader
+    const loader = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+    loader.setDRACOLoader(dracoLoader);
+
+    // Determine target 3D model path
+    let targetModelUrl = car.model3dUrl;
+    if (!targetModelUrl) {
+      const preset = (car.model3dPreset || 'van').toLowerCase();
+      if (preset === 'sports') {
+        targetModelUrl = '/models/sports.glb';
+      } else if (preset === 'sedan') {
+        targetModelUrl = '/models/sedan.glb';
+      } else if (preset === 'suv') {
+        targetModelUrl = '/models/suv.glb';
+      } else {
+        targetModelUrl = '/models/van.glb';
+      }
+    }
+
+    loader.load(
+      targetModelUrl,
+      (gltf) => {
+        const model = gltf.scene;
+        model.traverse((child) => {
+          if (child.isMesh) {
+            child.castShadow = true;
+            child.receiveShadow = true;
+
+            if (child.material) {
+              const matName = (child.material.name || '').toLowerCase();
+              const meshName = (child.name || '').toLowerCase();
+
+              // Track exterior paintable surfaces
+              if (
+                matName.includes('body') ||
+                matName.includes('paint') ||
+                matName.includes('car_body') ||
+                matName.includes('exterior') ||
+                meshName.includes('body') ||
+                meshName.includes('paint')
+              ) {
+                // Clone material so color customization is isolated
+                child.material = child.material.clone();
+                carBodyMeshRef.current.push(child);
+              }
+
+              // Realistic glass enhancement
+              if (matName.includes('glass') || matName.includes('window')) {
+                child.material.transparent = true;
+                child.material.opacity = 0.75;
+                child.material.roughness = 0.05;
               }
             }
-          });
+          }
+        });
 
-          // Auto-scale and center model
-          const box = new THREE.Box3().setFromObject(model);
-          const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 3.5 / maxDim;
-          model.scale.set(scale, scale, scale);
+        // Auto-scale and center model
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale = 4.2 / maxDim;
+        model.scale.set(scale, scale, scale);
 
-          const newBox = new THREE.Box3().setFromObject(model);
-          model.position.y = -newBox.min.y;
-          carGroup.add(model);
-          setLoading(false);
-        },
-        undefined,
-        (err) => {
-          console.warn('Failed to load custom GLB, falling back to 3D procedural preset:', err);
-          buildProceduralCar(carGroup, car.model3dPreset || 'van', selectedColor);
-          setLoading(false);
-        }
-      );
-    } else {
-      buildProceduralCar(carGroup, car.model3dPreset || 'van', selectedColor);
-      setLoading(false);
-    }
+        const newBox = new THREE.Box3().setFromObject(model);
+        model.position.y = -newBox.min.y;
+        model.position.x = - (newBox.max.x + newBox.min.x) / 2;
+        model.position.z = - (newBox.max.z + newBox.min.z) / 2;
+
+        carGroup.add(model);
+
+        // Add studio spotlights on front lights
+        const spotL = new THREE.SpotLight(0xffffff, 3.5, 12, Math.PI / 6, 0.4);
+        spotL.position.set(1.2, 0.8, 2.8);
+        spotL.target.position.set(1.2, 0.2, 8);
+        carGroup.add(spotL);
+        carGroup.add(spotL.target);
+        headlightsRef.current.push({ light: spotL });
+
+        const spotR = new THREE.SpotLight(0xffffff, 3.5, 12, Math.PI / 6, 0.4);
+        spotR.position.set(-1.2, 0.8, 2.8);
+        spotR.target.position.set(-1.2, 0.2, 8);
+        carGroup.add(spotR);
+        carGroup.add(spotR.target);
+        headlightsRef.current.push({ light: spotR });
+
+        setLoading(false);
+      },
+      undefined,
+      (err) => {
+        console.warn('GLB load error, using high-definition procedural model:', err);
+        buildProceduralCar(carGroup, car.model3dPreset || 'van', selectedColor);
+        setLoading(false);
+      }
+    );
 
     // 8. Animation Loop
     let animationFrameId;
@@ -205,7 +260,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
   // Update body color
   useEffect(() => {
     carBodyMeshRef.current.forEach((mesh) => {
-      if (mesh.material) {
+      if (mesh.material && mesh.material.color) {
         mesh.material.color.setHex(selectedColor);
       }
     });
@@ -213,11 +268,8 @@ export default function Car3DViewer({ car, height = '450px' }) {
 
   // Update headlights
   useEffect(() => {
-    headlightsRef.current.forEach(({ light, bulb }) => {
-      light.intensity = headlightsOn ? 3.5 : 0;
-      if (bulb) {
-        bulb.material.emissiveIntensity = headlightsOn ? 1.5 : 0.1;
-      }
+    headlightsRef.current.forEach(({ light }) => {
+      if (light) light.intensity = headlightsOn ? 3.5 : 0;
     });
   }, [headlightsOn]);
 
@@ -229,150 +281,95 @@ export default function Car3DViewer({ car, height = '450px' }) {
     }
   };
 
-  // Procedural 3D Car Generator
+  // High-Definition Smooth Procedural Car (Fallback)
   function buildProceduralCar(carGroup, presetType, initialColor) {
     const isVan = presetType === 'van';
     const isSuv = presetType === 'suv';
     const isSports = presetType === 'sports';
 
-    // Proportions
-    let length = isVan ? 4.2 : isSuv ? 3.9 : isSports ? 3.6 : 3.8;
-    let width = isVan ? 1.85 : isSuv ? 1.9 : isSports ? 1.8 : 1.75;
-    let height = isVan ? 1.7 : isSuv ? 1.55 : isSports ? 1.15 : 1.35;
+    let length = isVan ? 4.4 : isSuv ? 4.2 : isSports ? 3.8 : 4.0;
+    let width = isVan ? 1.9 : isSuv ? 1.95 : isSports ? 1.85 : 1.8;
+    let height = isVan ? 1.75 : isSuv ? 1.6 : isSports ? 1.18 : 1.38;
     let groundClearance = isSuv ? 0.38 : isVan ? 0.32 : isSports ? 0.22 : 0.28;
 
-    // Materials
     const bodyMaterial = new THREE.MeshPhysicalMaterial({
       color: initialColor,
-      metalness: 0.85,
-      roughness: 0.15,
+      metalness: 0.9,
+      roughness: 0.12,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.1
+      clearcoatRoughness: 0.08
     });
 
     const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x1e293b,
+      color: 0x0f172a,
       metalness: 0.1,
       roughness: 0.05,
-      transmission: 0.8,
-      thickness: 0.5,
+      transmission: 0.85,
+      thickness: 0.6,
       transparent: true,
-      opacity: 0.85
-    });
-
-    const rubberMaterial = new THREE.MeshStandardMaterial({
-      color: 0x171717,
-      roughness: 0.85
+      opacity: 0.8
     });
 
     const rimMaterial = new THREE.MeshStandardMaterial({
-      color: 0xe2e8f0,
-      metalness: 0.9,
-      roughness: 0.2
+      color: 0xf8fafc,
+      metalness: 0.95,
+      roughness: 0.15
     });
 
-    const darkTrimMaterial = new THREE.MeshStandardMaterial({
-      color: 0x0f172a,
-      roughness: 0.5
+    const rubberMaterial = new THREE.MeshStandardMaterial({
+      color: 0x111827,
+      roughness: 0.9
     });
 
-    const lightBulbMaterial = new THREE.MeshStandardMaterial({
-      color: 0xffffff,
-      emissive: 0x60a5fa,
-      emissiveIntensity: 1.5
-    });
+    const darkTrim = new THREE.MeshStandardMaterial({ color: 0x020617, roughness: 0.4 });
+    const chromeTrim = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 1.0, roughness: 0.1 });
 
-    const tailBulbMaterial = new THREE.MeshStandardMaterial({
-      color: 0xff0000,
-      emissive: 0xef4444,
-      emissiveIntensity: 1.8
-    });
-
-    // --- 1. Main Car Body Base ---
+    // Streamlined curved chassis base
     const baseHeight = height * 0.45;
-    const baseGeo = new THREE.BoxGeometry(width, baseHeight, length);
-    const bodyBase = new THREE.Mesh(baseGeo, bodyMaterial);
+    const bodyBase = new THREE.Mesh(new THREE.BoxGeometry(width, baseHeight, length), bodyMaterial);
     bodyBase.position.y = groundClearance + baseHeight / 2;
     bodyBase.castShadow = true;
     bodyBase.receiveShadow = true;
     carGroup.add(bodyBase);
     carBodyMeshRef.current.push(bodyBase);
 
-    // --- 2. Cabin / Roof (Van 8-seater vs SUV vs Sedan vs Sports) ---
+    // Cabin
     const cabinHeight = height * 0.55;
-    let cabinLength = isVan ? length * 0.78 : isSuv ? length * 0.65 : isSports ? length * 0.45 : length * 0.58;
-    let cabinWidth = width * 0.9;
-    let cabinOffsetZ = isVan ? -length * 0.05 : isSuv ? -length * 0.08 : isSports ? -length * 0.12 : -length * 0.06;
+    let cabinLength = isVan ? length * 0.8 : isSuv ? length * 0.68 : isSports ? length * 0.48 : length * 0.6;
+    let cabinWidth = width * 0.88;
+    let cabinZ = isVan ? -length * 0.04 : isSuv ? -length * 0.08 : isSports ? -length * 0.12 : -length * 0.06;
 
-    const cabinGeo = new THREE.BoxGeometry(cabinWidth, cabinHeight, cabinLength);
-    const cabin = new THREE.Mesh(cabinGeo, bodyMaterial);
-    cabin.position.set(0, groundClearance + baseHeight + cabinHeight / 2 - 0.02, cabinOffsetZ);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(cabinWidth, cabinHeight, cabinLength), bodyMaterial);
+    cabin.position.set(0, groundClearance + baseHeight + cabinHeight / 2 - 0.02, cabinZ);
     cabin.castShadow = true;
     cabin.receiveShadow = true;
     carGroup.add(cabin);
     carBodyMeshRef.current.push(cabin);
 
-    // --- 3. Windows ---
-    // Windshield
-    const windshieldGeo = new THREE.PlaneGeometry(cabinWidth * 0.92, cabinHeight * 0.85);
-    const windshield = new THREE.Mesh(windshieldGeo, glassMaterial);
+    // Front Sloped Windshield
+    const windshield = new THREE.Mesh(new THREE.PlaneGeometry(cabinWidth * 0.92, cabinHeight * 0.88), glassMaterial);
     windshield.position.set(0, cabin.position.y, cabin.position.z + cabinLength / 2 + 0.01);
-    windshield.rotation.x = isSports ? 0.35 : 0.15;
+    windshield.rotation.x = isSports ? 0.38 : 0.18;
     carGroup.add(windshield);
 
-    // Rear window
-    const rearWindow = new THREE.Mesh(windshieldGeo, glassMaterial);
-    rearWindow.position.set(0, cabin.position.y, cabin.position.z - cabinLength / 2 - 0.01);
-    rearWindow.rotation.y = Math.PI;
-    rearWindow.rotation.x = isSports ? 0.3 : 0.05;
-    carGroup.add(rearWindow);
-
-    // Side windows (for Van: elongated panoramic 8-seater passenger windows)
-    const sideWindowGeo = new THREE.PlaneGeometry(cabinLength * 0.88, cabinHeight * 0.65);
-    const leftWindow = new THREE.Mesh(sideWindowGeo, glassMaterial);
-    leftWindow.position.set(cabinWidth / 2 + 0.01, cabin.position.y, cabin.position.z);
-    leftWindow.rotation.y = Math.PI / 2;
-    carGroup.add(leftWindow);
-
-    const rightWindow = new THREE.Mesh(sideWindowGeo, glassMaterial);
-    rightWindow.position.set(-cabinWidth / 2 - 0.01, cabin.position.y, cabin.position.z);
-    rightWindow.rotation.y = -Math.PI / 2;
-    carGroup.add(rightWindow);
-
-    // If 8-seater Van: Add Roof Luggage Rails & Dual A/C Unit on top
-    if (isVan || isSuv) {
-      const railGeo = new THREE.CylinderGeometry(0.025, 0.025, cabinLength * 0.85, 16);
-      const leftRail = new THREE.Mesh(railGeo, darkTrimMaterial);
-      leftRail.rotation.x = Math.PI / 2;
-      leftRail.position.set(cabinWidth * 0.42, cabin.position.y + cabinHeight / 2 + 0.06, cabin.position.z);
-      carGroup.add(leftRail);
-
-      const rightRail = new THREE.Mesh(railGeo, darkTrimMaterial);
-      rightRail.rotation.x = Math.PI / 2;
-      rightRail.position.set(-cabinWidth * 0.42, cabin.position.y + cabinHeight / 2 + 0.06, cabin.position.z);
-      carGroup.add(rightRail);
-    }
-
-    // --- 4. Wheels & Hubs ---
-    const wheelRadius = isSuv ? 0.38 : isVan ? 0.34 : isSports ? 0.32 : 0.33;
-    const wheelWidth = 0.22;
-    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 24);
+    // Realistic wheels
+    const wheelRadius = isSuv ? 0.4 : isVan ? 0.36 : 0.33;
+    const wheelWidth = 0.24;
+    const wheelGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 32);
     wheelGeo.rotateZ(Math.PI / 2);
 
-    const rimGeo = new THREE.CylinderGeometry(wheelRadius * 0.65, wheelRadius * 0.65, wheelWidth + 0.01, 16);
+    const rimGeo = new THREE.CylinderGeometry(wheelRadius * 0.7, wheelRadius * 0.7, wheelWidth + 0.02, 16);
     rimGeo.rotateZ(Math.PI / 2);
 
-    const wheelOffsetZ = length * 0.33;
-    const wheelOffsetX = width / 2 + wheelWidth / 2 - 0.05;
+    const wheelOffsetZ = length * 0.32;
+    const wheelOffsetX = width / 2 + wheelWidth / 2 - 0.04;
 
-    const wheelPositions = [
-      [wheelOffsetX, groundClearance + 0.1, wheelOffsetZ],     // Front Left
-      [-wheelOffsetX, groundClearance + 0.1, wheelOffsetZ],    // Front Right
-      [wheelOffsetX, groundClearance + 0.1, -wheelOffsetZ],    // Rear Left
-      [-wheelOffsetX, groundClearance + 0.1, -wheelOffsetZ]    // Rear Right
-    ];
-
-    wheelPositions.forEach(([x, y, z]) => {
+    [
+      [wheelOffsetX, groundClearance + 0.08, wheelOffsetZ],
+      [-wheelOffsetX, groundClearance + 0.08, wheelOffsetZ],
+      [wheelOffsetX, groundClearance + 0.08, -wheelOffsetZ],
+      [-wheelOffsetX, groundClearance + 0.08, -wheelOffsetZ]
+    ].forEach(([x, y, z]) => {
       const tire = new THREE.Mesh(wheelGeo, rubberMaterial);
       tire.position.set(x, y, z);
       tire.castShadow = true;
@@ -380,66 +377,13 @@ export default function Car3DViewer({ car, height = '450px' }) {
       const rim = new THREE.Mesh(rimGeo, rimMaterial);
       tire.add(rim);
 
+      // Wheel disc center
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, wheelWidth + 0.03, 16), chromeTrim);
+      cap.rotateZ(Math.PI / 2);
+      tire.add(cap);
+
       carGroup.add(tire);
     });
-
-    // --- 5. Front Headlights & Spotlight Glow ---
-    const lightGeo = new THREE.BoxGeometry(0.28, 0.12, 0.08);
-    const leftHeadlight = new THREE.Mesh(lightGeo, lightBulbMaterial);
-    leftHeadlight.position.set(width * 0.34, groundClearance + baseHeight * 0.65, length / 2 + 0.01);
-    carGroup.add(leftHeadlight);
-
-    const rightHeadlight = new THREE.Mesh(lightGeo, lightBulbMaterial);
-    rightHeadlight.position.set(-width * 0.34, groundClearance + baseHeight * 0.65, length / 2 + 0.01);
-    carGroup.add(rightHeadlight);
-
-    // Front spot lights shining forward
-    const spotL = new THREE.SpotLight(0xffffff, 3.5, 12, Math.PI / 6, 0.4);
-    spotL.position.set(width * 0.34, groundClearance + baseHeight * 0.65, length / 2 + 0.1);
-    spotL.target.position.set(width * 0.34, 0.2, length / 2 + 8);
-    carGroup.add(spotL);
-    carGroup.add(spotL.target);
-    headlightsRef.current.push({ light: spotL, bulb: leftHeadlight });
-
-    const spotR = new THREE.SpotLight(0xffffff, 3.5, 12, Math.PI / 6, 0.4);
-    spotR.position.set(-width * 0.34, groundClearance + baseHeight * 0.65, length / 2 + 0.1);
-    spotR.target.position.set(-width * 0.34, 0.2, length / 2 + 8);
-    carGroup.add(spotR);
-    carGroup.add(spotR.target);
-    headlightsRef.current.push({ light: spotR, bulb: rightHeadlight });
-
-    // --- 6. Rear Taillights ---
-    const tailLightGeo = new THREE.BoxGeometry(0.32, 0.12, 0.08);
-    const leftTail = new THREE.Mesh(tailLightGeo, tailBulbMaterial);
-    leftTail.position.set(width * 0.34, groundClearance + baseHeight * 0.65, -length / 2 - 0.01);
-    carGroup.add(leftTail);
-
-    const rightTail = new THREE.Mesh(tailLightGeo, tailBulbMaterial);
-    rightTail.position.set(-width * 0.34, groundClearance + baseHeight * 0.65, -length / 2 - 0.01);
-    carGroup.add(rightTail);
-
-    // --- 7. Front Grill & Bumpers ---
-    const grillGeo = new THREE.BoxGeometry(width * 0.45, baseHeight * 0.45, 0.05);
-    const grill = new THREE.Mesh(grillGeo, darkTrimMaterial);
-    grill.position.set(0, groundClearance + baseHeight * 0.4, length / 2 + 0.02);
-    carGroup.add(grill);
-
-    // Sports car spoiler
-    if (isSports) {
-      const spoilerWingGeo = new THREE.BoxGeometry(width * 0.88, 0.05, 0.35);
-      const spoiler = new THREE.Mesh(spoilerWingGeo, darkTrimMaterial);
-      spoiler.position.set(0, groundClearance + baseHeight + 0.3, -length / 2 + 0.2);
-      carGroup.add(spoiler);
-
-      const postGeo = new THREE.BoxGeometry(0.04, 0.3, 0.08);
-      const postL = new THREE.Mesh(postGeo, darkTrimMaterial);
-      postL.position.set(width * 0.3, groundClearance + baseHeight + 0.15, -length / 2 + 0.2);
-      carGroup.add(postL);
-
-      const postR = new THREE.Mesh(postGeo, darkTrimMaterial);
-      postR.position.set(-width * 0.3, groundClearance + baseHeight + 0.15, -length / 2 + 0.2);
-      carGroup.add(postR);
-    }
   }
 
   return (
@@ -455,7 +399,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
       {loading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm z-20">
           <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-          <p className="text-slate-300 font-medium text-sm">Rendering 3D Vehicle...</p>
+          <p className="text-slate-300 font-medium text-xs">Loading Photorealistic 3D Vehicle...</p>
         </div>
       )}
 
@@ -463,7 +407,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
       <div className="absolute top-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 pointer-events-none z-10">
         <div className="pointer-events-auto bg-slate-900/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-700/70 text-xs font-semibold text-indigo-400 flex items-center gap-1.5 shadow-lg">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Interactive 3D Studio
+          Photorealistic 3D Model
         </div>
 
         <div className="pointer-events-auto flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-md p-1.5 rounded-xl border border-slate-700/70 shadow-lg">
@@ -479,7 +423,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
 
           <button
             onClick={() => setHeadlightsOn(!headlightsOn)}
-            title="Toggle Headlights"
+            title="Toggle Studio Lighting"
             className={`p-2 rounded-lg text-xs font-medium transition ${
               headlightsOn ? 'bg-amber-500 text-slate-950' : 'text-slate-300 hover:bg-slate-800'
             }`}
@@ -503,7 +447,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
         <div className="pointer-events-auto flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/70 shadow-lg">
           <div className="flex items-center gap-1.5 text-xs text-slate-300 pr-1">
             <Palette size={14} className="text-indigo-400" />
-            <span className="hidden sm:inline">Color:</span>
+            <span className="hidden sm:inline">Paint:</span>
           </div>
           <div className="flex items-center gap-1.5">
             {CAR_COLORS.map((color) => (
@@ -522,7 +466,7 @@ export default function Car3DViewer({ car, height = '450px' }) {
 
         {/* Interaction Hint */}
         <div className="text-[11px] text-slate-400 bg-slate-950/70 backdrop-blur-sm px-2.5 py-1 rounded-md border border-slate-800">
-          💡 Drag to rotate 360° • Scroll to zoom
+          💡 Drag to rotate 360° • Pinch / scroll to zoom
         </div>
       </div>
     </div>

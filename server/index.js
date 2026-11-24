@@ -252,6 +252,10 @@ app.post(
         parsedFeatures = features;
       }
 
+      if (!model3dUrl) {
+        model3dUrl = `/models/${model3dPreset || 'van'}.glb`;
+      }
+
       const newCar = {
         id: 'car-' + Date.now(),
         name,

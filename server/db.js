@@ -70,7 +70,7 @@ const getInitialData = () => {
         imageUrl: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80',
         model3dPreset: 'van',
         model3dType: 'preset',
-        model3dUrl: '',
+        model3dUrl: '/models/van.glb',
         available: true,
         createdAt: new Date().toISOString()
       },
@@ -95,7 +95,7 @@ const getInitialData = () => {
         imageUrl: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80',
         model3dPreset: 'suv',
         model3dType: 'preset',
-        model3dUrl: '',
+        model3dUrl: '/models/suv.glb',
         available: true,
         createdAt: new Date().toISOString()
       },
@@ -120,7 +120,7 @@ const getInitialData = () => {
         imageUrl: 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80',
         model3dPreset: 'sedan',
         model3dType: 'preset',
-        model3dUrl: '',
+        model3dUrl: '/models/sedan.glb',
         available: true,
         createdAt: new Date().toISOString()
       },
@@ -145,7 +145,7 @@ const getInitialData = () => {
         imageUrl: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80',
         model3dPreset: 'sports',
         model3dType: 'preset',
-        model3dUrl: '',
+        model3dUrl: '/models/sports.glb',
         available: true,
         createdAt: new Date().toISOString()
       }
