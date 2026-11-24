@@ -97,20 +97,6 @@ export default function Navbar({
             </button>
           )}
 
-          {user?.role === 'admin' && (
-            <button
-              onClick={() => setCurrentView('admin')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition border ${
-                currentView === 'admin'
-                  ? 'bg-indigo-600 border-indigo-500 text-white shadow-md'
-                  : 'bg-indigo-950/60 border-indigo-700/50 text-indigo-300 hover:bg-indigo-900/80'
-              }`}
-            >
-              <ShieldCheck size={16} />
-              <span>Admin Portal</span>
-            </button>
-          )}
-
           {/* User Profile / Auth State */}
           {user ? (
             <div className="flex items-center gap-2.5 pl-2 border-l border-slate-700">

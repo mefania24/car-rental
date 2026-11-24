@@ -7,6 +7,27 @@
   }
 }
 
+/* Custom laser scanning beam animation */
+@keyframes scanBeam {
+  0% {
+    top: 0%;
+    opacity: 0.8;
+  }
+  50% {
+    top: 96%;
+    opacity: 1;
+  }
+  100% {
+    top: 0%;
+    opacity: 0.8;
+  }
+}
+
+.animate-scanBeam {
+  position: absolute;
+  animation: scanBeam 2s ease-in-out infinite;
+}
+
 /* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 8px;

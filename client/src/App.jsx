@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import CarDetailModal from './components/CarDetailModal';
 import LoginModal from './components/LoginModal';
 import AdminDashboard from './components/AdminDashboard';
+import AdminLogin from './components/AdminLogin';
 import {
   Car,
   Search,
@@ -30,7 +31,12 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState('');
   
-  const [currentView, setCurrentView] = useState('catalog'); // 'catalog' | 'admin' | 'my-bookings'
+  // URL routing: detects if user typed "/admin" in the browser address bar
+  const [isAdminRoute, setIsAdminRoute] = useState(
+    typeof window !== 'undefined' && window.location.pathname.startsWith('/admin')
+  );
+  
+  const [currentView, setCurrentView] = useState('catalog'); // 'catalog' | 'my-bookings'
   const [selectedCar, setSelectedCar] = useState(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   
@@ -42,6 +48,26 @@ export default function App() {
   // My Bookings
   const [myBookings, setMyBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+
+  // Sync URL with browser history
+  useEffect(() => {
+    const handlePopState = () => {
+      setIsAdminRoute(window.location.pathname.startsWith('/admin'));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToSite = () => {
+    window.history.pushState(null, '', '/');
+    setIsAdminRoute(false);
+    setCurrentView('catalog');
+  };
+
+  const navigateToAdmin = () => {
+    window.history.pushState(null, '', '/admin');
+    setIsAdminRoute(true);
+  };
 
   // Restore auth from local storage
   useEffect(() => {
@@ -119,11 +145,46 @@ export default function App() {
     setUser(null);
     setToken('');
     setCurrentView('catalog');
+    if (isAdminRoute) {
+      navigateToSite();
+    }
   };
 
+  // -------------------------------------------------------------
+  // DEDICATED /admin ROUTE (Completely Isolated from Customers)
+  // Only accessible when manually typing "/admin" in the URL
+  // -------------------------------------------------------------
+  if (isAdminRoute) {
+    if (user?.role === 'admin') {
+      return (
+        <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+          <AdminDashboard
+            token={token}
+            onCarUpdated={fetchCars}
+            onBackToSite={navigateToSite}
+          />
+        </div>
+      );
+    }
+
+    // Unauthenticated Admin Login
+    return (
+      <AdminLogin
+        onLoginSuccess={(loggedInUser, loggedInToken) => {
+          setUser(loggedInUser);
+          setToken(loggedInToken);
+        }}
+        onBackToSite={navigateToSite}
+      />
+    );
+  }
+
+  // -------------------------------------------------------------
+  // CUSTOMER / PUBLIC CAR RENTAL EXPERIENCE (Root URL "/")
+  // -------------------------------------------------------------
   return (
     <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100">
-      {/* Navbar with Admin Contacts */}
+      {/* Navbar with Admin Contacts (No Admin button visible to regular users) */}
       <Navbar
         user={user}
         adminContact={adminContact}
@@ -133,10 +194,7 @@ export default function App() {
         setCurrentView={setCurrentView}
       />
 
-      {/* MAIN VIEW CONTROLLER */}
-      {currentView === 'admin' && user?.role === 'admin' ? (
-        <AdminDashboard token={token} onCarUpdated={fetchCars} />
-      ) : currentView === 'my-bookings' ? (
+      {currentView === 'my-bookings' ? (
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 flex-1 w-full space-y-6">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-black text-white">My Rental Reservations</h1>
@@ -501,16 +559,13 @@ export default function App() {
         />
       )}
 
-      {/* Customer / Admin Login & Register Modal */}
+      {/* Customer Login & Register Modal */}
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
         onLoginSuccess={(loggedInUser) => {
           setUser(loggedInUser);
           setToken(localStorage.getItem('rental_token') || '');
-          if (loggedInUser.role === 'admin') {
-            setCurrentView('admin');
-          }
         }}
       />
     </div>

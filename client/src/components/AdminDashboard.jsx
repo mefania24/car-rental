@@ -16,12 +16,14 @@ import {
   MapPin,
   Save,
   Users,
-  DollarSign
+  DollarSign,
+  ArrowLeft
 } from 'lucide-react';
 import { Facebook } from './Icons';
+import Photo3DScanner from './Photo3DScanner';
 
-export default function AdminDashboard({ token, onCarUpdated }) {
-  const [activeTab, setActiveTab] = useState('cars'); // 'cars' | 'add-car' | 'contacts' | 'bookings'
+export default function AdminDashboard({ token, onCarUpdated, onBackToSite }) {
+  const [activeTab, setActiveTab] = useState('add-car'); // 'add-car' | 'cars' | 'contacts' | 'bookings'
   const [cars, setCars] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [contact, setContact] = useState({
@@ -38,7 +40,7 @@ export default function AdminDashboard({ token, onCarUpdated }) {
   const [error, setError] = useState('');
 
   // New Car Form State
-  const [carName, setCarName] = useState('');
+  const [carName, setCarName] = useState('2026 Grand Family Tourer (8-Seater)');
   const [brand, setBrand] = useState('Toyota');
   const [category, setCategory] = useState('Van');
   const [seats, setSeats] = useState(8);
@@ -47,7 +49,7 @@ export default function AdminDashboard({ token, onCarUpdated }) {
   const [pricePerDay, setPricePerDay] = useState(85);
   const [airConditioned, setAirConditioned] = useState(true);
   const [features, setFeatures] = useState('8-seated, Air Conditioner, Comfortable, Bluetooth');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState('Spacious 8-seated van with dual-zone climate air-conditioning and superior comfort.');
   const [model3dPreset, setModel3dPreset] = useState('van');
   const [imageFile, setImageFile] = useState(null);
   const [imageUrl, setImageUrl] = useState('');
@@ -57,17 +59,14 @@ export default function AdminDashboard({ token, onCarUpdated }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // 1. Fetch cars
       const carsRes = await fetch('/api/cars');
       const carsData = await carsRes.json();
       setCars(carsData.cars || []);
 
-      // 2. Fetch contact info
       const contactRes = await fetch('/api/contact');
       const contactData = await contactRes.json();
       if (contactData.contact) setContact(contactData.contact);
 
-      // 3. Fetch bookings
       const bookingsRes = await fetch('/api/bookings', {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -84,6 +83,31 @@ export default function AdminDashboard({ token, onCarUpdated }) {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Called when AI Photo-to-3D Scanner finishes scanning an uploaded picture
+  const handleScanGenerated = ({ rawFile, previewUrl, results }) => {
+    setImageFile(rawFile);
+    setImageUrl(previewUrl);
+    if (results) {
+      setModel3dPreset(results.preset || 'van');
+      if (results.preset === 'van') {
+        setCategory('Van');
+        setSeats(8);
+        setCarName('2026 Tourer Van (8-Seater)');
+        setFeatures('8-seated, Air Conditioner, Comfortable, Bluetooth');
+      } else if (results.preset === 'suv') {
+        setCategory('SUV');
+        setSeats(7);
+        setCarName('2026 Explorer SUV (7-Seater)');
+        setFeatures('7-seated, Air Conditioner, AWD, High Ground Clearance');
+      } else if (results.preset === 'sedan') {
+        setCategory('Sedan');
+        setSeats(5);
+        setCarName('2026 Executive Sedan (5-Seater)');
+        setFeatures('5-seated, Air Conditioner, Comfortable Leather, Quiet');
+      }
+    }
+  };
 
   // Handle Add New Car
   const handleAddCar = async (e) => {
@@ -127,13 +151,7 @@ export default function AdminDashboard({ token, onCarUpdated }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to add car');
 
-      setMessage('Car added successfully with 3D model support!');
-      // Reset form
-      setCarName('');
-      setDescription('');
-      setImageFile(null);
-      setModel3dFile(null);
-      setImageUrl('');
+      setMessage('Vehicle added! 3D model successfully regenerated and published to fleet.');
       setActiveTab('cars');
       fetchData();
       if (onCarUpdated) onCarUpdated();
@@ -215,46 +233,64 @@ export default function AdminDashboard({ token, onCarUpdated }) {
             <ShieldCheck size={26} />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Admin Fleet Dashboard</h1>
-            <p className="text-xs text-slate-400">Manage rental cars, 3D representations, contact info & reservations</p>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black text-white tracking-tight">Admin Fleet Dashboard</h1>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2.5 py-0.5 rounded-full border border-indigo-500/30 font-bold uppercase">
+                /admin URL
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">Isolated Admin Control • Photo 3D Reconstructor • Contacts & Fleet</p>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
-          <button
-            onClick={() => setActiveTab('cars')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'cars' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Car Fleet ({cars.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('add-car')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'add-car' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <PlusCircle size={14} />
-            <span>Add Car</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('contacts')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'contacts' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Admin Contacts
-          </button>
-          <button
-            onClick={() => setActiveTab('bookings')}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
-              activeTab === 'bookings' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            Reservations ({bookings.length})
-          </button>
+        {/* Tab Switcher & Return to Site */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800">
+            <button
+              onClick={() => setActiveTab('add-car')}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'add-car' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Sparkles size={14} />
+              <span>Scan Photo to 3D</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('cars')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'cars' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Car Fleet ({cars.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('contacts')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'contacts' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Contacts
+            </button>
+            <button
+              onClick={() => setActiveTab('bookings')}
+              className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition ${
+                activeTab === 'bookings' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Bookings ({bookings.length})
+            </button>
+          </div>
+
+          {onBackToSite && (
+            <button
+              onClick={onBackToSite}
+              className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3.5 py-2.5 rounded-2xl border border-slate-700 transition"
+              title="Return to public customer website"
+            >
+              <ArrowLeft size={14} />
+              <span>View Site</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -271,7 +307,170 @@ export default function AdminDashboard({ token, onCarUpdated }) {
         </div>
       )}
 
-      {/* TAB 1: CAR FLEET LIST */}
+      {/* TAB 1: ADD NEW CAR WITH AI PHOTO-TO-3D SCANNER */}
+      {activeTab === 'add-car' && (
+        <div className="space-y-6 max-w-4xl mx-auto">
+          {/* Step 1: Photo-to-3D Scanner Component */}
+          <Photo3DScanner
+            initialPreset={model3dPreset}
+            onGenerated={handleScanGenerated}
+          />
+
+          {/* Step 2: Car Specs & Details Form */}
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <h3 className="text-base font-bold text-white mb-1">
+              3. Vehicle Specifications & Pricing
+            </h3>
+            <p className="text-xs text-slate-400 mb-6">
+              Enter vehicle seating ("8-seated"), air conditioner, price per day, and contact highlights.
+            </p>
+
+            <form onSubmit={handleAddCar} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Car Model / Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={carName}
+                    onChange={(e) => setCarName(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Brand / Make</label>
+                  <input
+                    type="text"
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Category & 3D Preset</label>
+                  <select
+                    value={category}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      if (e.target.value === 'Van') { setModel3dPreset('van'); setSeats(8); }
+                      else if (e.target.value === 'SUV') { setModel3dPreset('suv'); setSeats(7); }
+                      else if (e.target.value === 'Sedan') { setModel3dPreset('sedan'); setSeats(5); }
+                      else if (e.target.value === 'Sports') { setModel3dPreset('sports'); setSeats(2); }
+                    }}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-semibold text-indigo-300"
+                  >
+                    <option value="Van">Van (8-Seater High Roof)</option>
+                    <option value="SUV">SUV (All-Terrain 7-Seater)</option>
+                    <option value="Sedan">Sedan (Executive 5-Seater)</option>
+                    <option value="Sports">Sports Coupe</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Seats (Passengers)</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="20"
+                    value={seats}
+                    onChange={(e) => setSeats(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Price Per Day ($) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={pricePerDay}
+                    onChange={(e) => setPricePerDay(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-emerald-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Transmission</label>
+                  <select
+                    value={transmission}
+                    onChange={(e) => setTransmission(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Automatic">Automatic</option>
+                    <option value="Manual">Manual</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Fuel Type</label>
+                  <select
+                    value={fuel}
+                    onChange={(e) => setFuel(e.target.value)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="Diesel">Diesel</option>
+                    <option value="Gasoline">Gasoline</option>
+                    <option value="Hybrid">Hybrid</option>
+                    <option value="Electric">Electric</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center sm:pt-6">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={airConditioned}
+                      onChange={(e) => setAirConditioned(e.target.checked)}
+                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
+                    />
+                    <span>Air Conditioner Included</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Features & Tags (e.g., "8-seated", "Air Conditioner", "Comfortable")
+                </label>
+                <input
+                  type="text"
+                  value={features}
+                  onChange={(e) => setFeatures(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Car Description & Details</label>
+                <textarea
+                  rows="3"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                ></textarea>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+              >
+                <Sparkles size={16} />
+                <span>{loading ? 'Publishing Vehicle to Fleet...' : 'Save & Publish 3D Car to Rental Fleet'}</span>
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: CAR FLEET LIST */}
       {activeTab === 'cars' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -318,8 +517,8 @@ export default function AdminDashboard({ token, onCarUpdated }) {
                       <span className="bg-slate-800 px-2 py-0.5 rounded-md">
                         {car.transmission}
                       </span>
-                      <span className="bg-slate-800 px-2 py-0.5 rounded-md">
-                        3D: {car.model3dType === 'custom' ? 'Custom .GLB' : car.model3dPreset}
+                      <span className="bg-slate-800 px-2 py-0.5 rounded-md text-emerald-300">
+                        3D: {car.model3dPreset}
                       </span>
                     </div>
 
@@ -345,232 +544,6 @@ export default function AdminDashboard({ token, onCarUpdated }) {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* TAB 2: ADD NEW CAR */}
-      {activeTab === 'add-car' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-3xl mx-auto shadow-2xl">
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-800">
-            <div className="p-3 rounded-2xl bg-indigo-500/10 text-indigo-400">
-              <Car size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Add New Car to Rental Fleet</h2>
-              <p className="text-xs text-slate-400">Provide details, photos, specs, and 3D preview model</p>
-            </div>
-          </div>
-
-          <form onSubmit={handleAddCar} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Car Model / Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. 2026 Premium 8-Seater Grand Tourer"
-                  value={carName}
-                  onChange={(e) => setCarName(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Brand / Make</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Toyota, Ford, Hyundai, Mercedes"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => {
-                    setCategory(e.target.value);
-                    if (e.target.value === 'Van') setModel3dPreset('van');
-                    else if (e.target.value === 'SUV') setModel3dPreset('suv');
-                    else if (e.target.value === 'Sedan') setModel3dPreset('sedan');
-                    else if (e.target.value === 'Sports') setModel3dPreset('sports');
-                  }}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Van">Van / Minivan</option>
-                  <option value="SUV">SUV</option>
-                  <option value="Sedan">Sedan</option>
-                  <option value="Sports">Sports Coupe</option>
-                  <option value="Compact">Compact</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Seats (Passengers)</label>
-                <input
-                  type="number"
-                  min="2"
-                  max="20"
-                  value={seats}
-                  onChange={(e) => setSeats(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Rental Price / Day ($) *</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={pricePerDay}
-                  onChange={(e) => setPricePerDay(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-emerald-400"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Transmission</label>
-                <select
-                  value={transmission}
-                  onChange={(e) => setTransmission(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Automatic">Automatic</option>
-                  <option value="Manual">Manual</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">Fuel Type</label>
-                <select
-                  value={fuel}
-                  onChange={(e) => setFuel(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="Diesel">Diesel</option>
-                  <option value="Gasoline">Gasoline</option>
-                  <option value="Hybrid">Hybrid</option>
-                  <option value="Electric">Electric</option>
-                </select>
-              </div>
-
-              <div className="flex items-center sm:pt-6">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-300">
-                  <input
-                    type="checkbox"
-                    checked={airConditioned}
-                    onChange={(e) => setAirConditioned(e.target.checked)}
-                    className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 bg-slate-800 border-slate-700"
-                  />
-                  <span>Air Conditioner Included</span>
-                </label>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                Features / Specs (comma-separated tags)
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. 8-seated, Air Conditioner, Comfortable, Bluetooth Audio, Leather Seats"
-                value={features}
-                onChange={(e) => setFeatures(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Car Description & Details</label>
-              <textarea
-                rows="3"
-                placeholder="Describe the comfort, seating, luggage space, and condition..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              ></textarea>
-            </div>
-
-            {/* Picture Upload / Image URL */}
-            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-3">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Upload size={14} className="text-indigo-400" /> Car Picture Upload
-              </span>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Upload Photo File</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files[0])}
-                    className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Or Photo URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* 3D Representation Model Selection */}
-            <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-3">
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Sparkles size={14} className="text-indigo-400" /> Interactive 3D Model Settings
-              </span>
-              <p className="text-[11px] text-slate-400 leading-normal">
-                Pick a high-precision 3D preset (Van, SUV, Sedan, Sports) or upload a custom `.glb` 3D car file.
-              </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Select 3D Preset</label>
-                  <select
-                    value={model3dPreset}
-                    onChange={(e) => setModel3dPreset(e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  >
-                    <option value="van">Van (8-Seater High Roof)</option>
-                    <option value="suv">SUV (All-Terrain)</option>
-                    <option value="sedan">Sedan (Executive Saloon)</option>
-                    <option value="sports">Sports Coupe (Velocity GT)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] text-slate-400 mb-1">Optional: Upload Custom .GLB 3D File</label>
-                  <input
-                    type="file"
-                    accept=".glb,.gltf"
-                    onChange={(e) => setModel3dFile(e.target.files[0])}
-                    className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-700 file:text-slate-200 hover:file:bg-slate-600"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 text-sm"
-            >
-              {loading ? 'Adding Vehicle...' : 'Publish Car to Rental Fleet'}
-            </button>
-          </form>
         </div>
       )}
 
