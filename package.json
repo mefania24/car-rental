@@ -11,6 +11,9 @@
     "server": "npm --prefix server start",
     "client": "npm --prefix client run dev"
   },
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "keywords": [
     "car-rental",
     "3d",
