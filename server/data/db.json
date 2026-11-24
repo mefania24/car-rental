@@ -1,0 +1,148 @@
+{
+  "users": [
+    {
+      "id": "admin-01",
+      "name": "System Admin",
+      "email": "admin@rental.com",
+      "password": "$2b$10$0zKCo4hCW1uShKxAxIEDL.T7ej/78eEEfa0gulIA6CXe.W3L5otsq",
+      "role": "admin",
+      "createdAt": "2026-11-24T08:32:10.865Z"
+    },
+    {
+      "id": "cust-01",
+      "name": "John Doe",
+      "email": "customer@rental.com",
+      "password": "$2b$10$7yFcSgSx6QVRM37lpdQK8eUFm4Ih1yV93amhz/XY7Cp5Mmccg5RKq",
+      "role": "customer",
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    }
+  ],
+  "adminContact": {
+    "phone": "+1 (555) 789-2468",
+    "facebook": "https://facebook.com/PrimeAutoRentals",
+    "email": "admin@rental.com",
+    "whatsapp": "+15557892468",
+    "address": "104 Boulevard Way, Metro City",
+    "businessHours": "Mon - Sun: 7:00 AM - 10:00 PM"
+  },
+  "cars": [
+    {
+      "id": "car-01",
+      "name": "Grand Family Tourer Van",
+      "brand": "Toyota",
+      "category": "Van",
+      "seats": 8,
+      "transmission": "Automatic",
+      "fuel": "Diesel",
+      "pricePerDay": 85,
+      "airConditioned": true,
+      "features": [
+        "8-seated",
+        "Air Conditioner (Dual Zone)",
+        "Comfortable Captain Seats",
+        "Extra Luggage Space",
+        "Touchscreen GPS"
+      ],
+      "description": "Perfect for large family trips and corporate travel. Smooth suspension, 8 comfortable seats with ample legroom and luggage space.",
+      "imageUrl": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&w=1200&q=80",
+      "model3dPreset": "van",
+      "model3dType": "preset",
+      "model3dUrl": "",
+      "available": true,
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    },
+    {
+      "id": "car-02",
+      "name": "Apex All-Terrain Explorer SUV",
+      "brand": "Ford",
+      "category": "SUV",
+      "seats": 7,
+      "transmission": "Automatic",
+      "fuel": "Gasoline",
+      "pricePerDay": 95,
+      "airConditioned": true,
+      "features": [
+        "7-seated",
+        "Full Climate Control",
+        "All-Wheel Drive (AWD)",
+        "High Ground Clearance",
+        "Apple CarPlay & Android Auto"
+      ],
+      "description": "Tackle any highway or country road with this luxurious, spacious SUV. Features powerful engine performance and premium interior comfort.",
+      "imageUrl": "https://images.unsplash.com/photo-1519641471654-76ce0107ad1b?auto=format&fit=crop&w=1200&q=80",
+      "model3dPreset": "suv",
+      "model3dType": "preset",
+      "model3dUrl": "",
+      "available": true,
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    },
+    {
+      "id": "car-03",
+      "name": "Executive Elegance Sedan",
+      "brand": "Mercedes-Benz",
+      "category": "Sedan",
+      "seats": 5,
+      "transmission": "Automatic",
+      "fuel": "Hybrid",
+      "pricePerDay": 110,
+      "airConditioned": true,
+      "features": [
+        "5-seated",
+        "Whisper-Quiet A/C",
+        "Leather Ergonomic Seats",
+        "Fuel Efficient Hybrid",
+        "Premium Sound System"
+      ],
+      "description": "Arrive in style. Modern, sleek, and exceptionally comfortable for business meetings, airport transfers, and couple weekend escapes.",
+      "imageUrl": "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80",
+      "model3dPreset": "sedan",
+      "model3dType": "preset",
+      "model3dUrl": "",
+      "available": true,
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    },
+    {
+      "id": "car-04",
+      "name": "Velocity GT Sport Coupe",
+      "brand": "Porsche",
+      "category": "Sports",
+      "seats": 2,
+      "transmission": "Automatic",
+      "fuel": "Gasoline",
+      "pricePerDay": 160,
+      "airConditioned": true,
+      "features": [
+        "2-seated",
+        "Dual Climate A/C",
+        "Sport Exhaust System",
+        "Panoramic Sunroof",
+        "0-60 in 3.6s"
+      ],
+      "description": "For thrill-seekers who crave unmatched performance, precision handling, and jaw-dropping road presence.",
+      "imageUrl": "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      "model3dPreset": "sports",
+      "model3dType": "preset",
+      "model3dUrl": "",
+      "available": true,
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "book-01",
+      "carId": "car-01",
+      "carName": "Grand Family Tourer Van",
+      "userId": "cust-01",
+      "customerName": "John Doe",
+      "customerEmail": "customer@rental.com",
+      "customerPhone": "+1 (555) 321-9876",
+      "startDate": "2026-12-01",
+      "endDate": "2026-12-05",
+      "totalDays": 4,
+      "totalPrice": 340,
+      "status": "Confirmed",
+      "notes": "Needs child car seat installed.",
+      "createdAt": "2026-11-24T08:32:10.866Z"
+    }
+  ]
+}

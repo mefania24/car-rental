@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: car-rental-3d
+    env: node
+    plan: free
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
